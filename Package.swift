@@ -5,10 +5,12 @@ import PackageDescription
 
 let package = Package(
     name: "SimpleSelector",
+    platforms: [.iOS(.v14)],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
             name: "SimpleSelector",
+            type: .static,
             targets: ["SimpleSelector"]),
     ],
     dependencies: [
