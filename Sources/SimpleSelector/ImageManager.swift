@@ -7,8 +7,9 @@
 
 import Foundation
 import Photos
+import SwiftUI
 
-private class ImageManager {
+internal class ImageManager {
     
     // Keep a list of image VIEWS that respond to a small manager class they're initialized with,
     // then set or null a published image to update the view which is rendered
@@ -22,6 +23,8 @@ private class ImageManager {
     let ssm:SimpleSelectorManager
     let mediaFetchOptions:PHFetchOptions
     let thumbnailReqOptions:PHImageRequestOptions
+    var selectorLoadedImages:[Int:WrappedImageView] = [:]
+    var assetFetchResult:PHFetchResult<PHAsset>
     
     init(simpleSelectorManager: SimpleSelectorManager) {
         self.ssm = simpleSelectorManager
@@ -39,17 +42,72 @@ private class ImageManager {
         reqOptThumbnail.isSynchronous = SimpleSelectorConfig.imageFetchIsSync
         reqOptThumbnail.deliveryMode = ssm.selectorFieldResolution
         self.thumbnailReqOptions = reqOptThumbnail
+        self.assetFetchResult = ImageManager.getFetchResult(withFetchOptions: self.mediaFetchOptions)
     }
     
-    func getFetchResult() -> PHFetchResult<PHAsset> {
-        return PHAsset.fetchAssets(with: mediaFetchOptions)
+    //make atomic?
+    func getWrappedImage(forIndex: Int) -> WrappedImageView {
+        if let wiv = selectorLoadedImages[forIndex] {
+            return wiv
+        } else {
+            let wiv = WrappedImageView()
+            selectorLoadedImages[forIndex] = wiv
+            return wiv
+        }
     }
     
-    func fetchImage(forIndex: Int) {
+    private static func getFetchResult(withFetchOptions: PHFetchOptions) -> PHFetchResult<PHAsset> {
+        return PHAsset.fetchAssets(with: withFetchOptions)
+    }
+    
+    func manageImageLoading(forIndex: Int) {
         
     }
     
+    // Function fetches images for thumbnails in the selector view
+    func fetchImageAsync(forIndex: Int) {
+        print("Calling fetchImageAsync!")
+        if let _ = self.selectorLoadedImages[forIndex]?.image {
+            // If image already loaded, return early
+            print("RIP")
+            return
+        } else {
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                manager.requestImage(for: self.assetFetchResult.object(at: forIndex),
+                                     targetSize: SimpleSelectorConfig.thumbnailTargetSize,
+                                     contentMode: .aspectFill, options: thumbnailReqOptions) { image, error  in
+                    if let _ = error {
+                        print(error)
+                        print("RIP 2")
+                        // Image can't be loaded for this index for whatever reason
+                        //return
+                    }
+                    guard let image = image else {
+                        print("RIP 3")
+                        // Image can't be loaded for this index for whatever reason
+                        return
+                    }
+                    DispatchQueue.main.async { // Update UI on main thread
+                        // Create an image view to be displayed in a thumbnail
+                        selectorLoadedImages[forIndex]?.image = Image(uiImage: image)
+                        print("SETTING LOADED THUMBNAIL IMAGE!")
+                    }
+                }
+            }
+        }
+    }
+    
+    // Used to free images that are out of sight to conserve memory
     func releaseImage(forIndex: Int) {
-        
+        if let _ = self.selectorLoadedImages[forIndex] {
+            self.selectorLoadedImages[forIndex]!.image = nil
+        }
     }
+    
+    // Possibly move fetchImageAsync and releaseImage into a single function controlled by a mutex lock
 }
+
+internal class WrappedImageView: ObservableObject {
+    @Published var image:Image?
+}
+

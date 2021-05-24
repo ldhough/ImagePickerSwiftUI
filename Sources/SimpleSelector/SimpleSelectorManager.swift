@@ -17,6 +17,8 @@ public protocol SimpleSelectorManager {
     // Determines what actions are taken when an image is deselected
     func deselect()
     
+    func focus()
+    
     // When executed, applies changes to currently selected UIImage
     func applyToSelected(image: UIImage)
     
