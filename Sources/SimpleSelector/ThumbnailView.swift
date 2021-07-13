@@ -12,12 +12,12 @@ internal struct ThumbnailView: View {
     
     let imageIndex:Int
     let imageManager:ImageManager
-    @ObservedObject var wrappedImageView:WrappedImageView
+    @ObservedObject var wrappedImage:WrappedImage
     
-    init(index: Int, imageManager: ImageManager, wrappedImageView: WrappedImageView) {
+    init(index: Int, imageManager: ImageManager, wrappedImage: WrappedImage) {
         self.imageIndex = index
         self.imageManager = imageManager
-        self.wrappedImageView = wrappedImageView
+        self.wrappedImage = wrappedImage
     }
     
     private func thumbnailViewSize() -> CGFloat {
@@ -26,8 +26,8 @@ internal struct ThumbnailView: View {
     
     var body: some View {
         let viewSize = thumbnailViewSize()
-        if let image = wrappedImageView.image {
-            image
+        if wrappedImage.image != nil {
+            Image(uiImage: wrappedImage.image!)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(width: viewSize, height: viewSize, alignment: .center)

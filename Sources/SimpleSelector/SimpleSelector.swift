@@ -5,6 +5,7 @@ import Photos
 public struct SimpleSelector: View {
     
     private let imageManager:ImageManager
+    private let cols = Array(repeating: GridItem(.flexible(), spacing: 0), count: SimpleSelectorConfig.thumbnailCountPerRow)
     
     public init(_ manager: SimpleSelectorManager) {
         print("Initializing SimpleSelector view!")
@@ -13,20 +14,17 @@ public struct SimpleSelector: View {
     
     private var selectorView: some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 0),
-                                GridItem(.flexible(), spacing: 0),
-                                GridItem(.flexible(), spacing: 0)], spacing: 0) {
+            LazyVGrid(columns: cols, spacing: 0) {
                 ForEach((0 ... self.imageManager.assetFetchResult.count-1), id: \.self) { index in
-                    let wiv = self.imageManager.getWrappedImage(forIndex: index)
+                    let wrappedImage = self.imageManager.getCreateWrappedImage(forIndex: index)//WrappedImage(imageManager: self.imageManager, loadsIndex: index)
                     ThumbnailView(index: index,
                                   imageManager: self.imageManager,
-                                  wrappedImageView: wiv)//self.imageManager.getWrappedImage(forIndex: index))
-                        .onAppear(perform: {
-                            print("ON APPEAR TRIGGERED FOR INDEX \(index)")
-                            self.imageManager.fetchImageAsync(forIndex: index)
-                        }).onDisappear(perform: {
-                            //self.imageManager.releaseImage(forIndex: index)
-                        })
+                                  wrappedImage: wrappedImage)
+                        .onAppear() {
+                            DispatchQueue.global(qos: .userInteractive).async {
+                                self.imageManager.manageLoadingFreeing(forIndex: index)
+                            }
+                        }.border(Color.black)
                 }
             }
         }

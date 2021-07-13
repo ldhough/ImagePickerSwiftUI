@@ -40,6 +40,10 @@ internal class ImageLock {
         return result == 0
     }
     
+    public func getLock() {
+        pthread_mutex_lock(&lock)
+    }
+    
     public func releaseLock() {
         pthread_mutex_unlock(&lock)
     }
